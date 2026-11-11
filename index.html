@@ -707,7 +707,8 @@ const FOUNTAIN = new THREE.Vector3(0, G, 0);
 { const cyl = (r, h, col, y, seg=24) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg), new THREE.MeshLambertMaterial({ color:dreamC(col), flatShading:true })); m.position.set(0, y + h/2, 0); m.castShadow = m.receiveShadow = true; m.userData.role = 'world'; scene.add(m); return m; };
   cyl(2.8, 0.45, '#ece0e8', G); cyl(2.45, 0.04, '#9ec8f0', G+0.42); cyl(0.32, 1.3, '#ece0e8', G+0.45, 10); cyl(0.95, 0.22, '#ece0e8', G+1.75, 16); cyl(0.78, 0.04, '#9ec8f0', G+1.95, 16);
   const ring = new THREE.Mesh(new THREE.RingGeometry(4.0, 4.4, 36), new THREE.MeshLambertMaterial({ color:dreamC('#e4c8d8') })); ring.rotation.x = -Math.PI/2; ring.position.set(0, G+0.035, 0); scene.add(ring); blockC(0, 0, 3.2); }
-const spray = Array.from({length:14}, ()=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.08), new THREE.MeshBasicMaterial({ color:'#eef6ff' })); scene.add(m); return m; });
+const sprayMat = new THREE.MeshBasicMaterial({ color:'#eef6ff' });
+const spray = Array.from({length:36}, (_,i)=>{ const k = i % 3, m = new THREE.Mesh(new THREE.BoxGeometry(k === 1 ? 0.05 : 0.07, k === 1 ? 0.12 : 0.07, k === 1 ? 0.05 : 0.07), sprayMat); scene.add(m); return m; });
 const BX = -4.4, BZ = -8.4;
 bench(BX, BZ, 0);
 const PBENCH = new THREE.Vector3(4.4, G, 8.4); bench(PBENCH.x, PBENCH.z, Math.PI);
@@ -1743,12 +1744,18 @@ paper.castShadow = true; paper.userData.role = 'paper'; scene.add(paper);
 meshes.push({ mesh:paper, base:new THREE.Color('#d6402e'), role:'paper' });
 const paperRest = new THREE.Vector3(-3, G+0.045, -10.5), paperFrom = new THREE.Vector3(), paperTo = new THREE.Vector3();
 const restY = () => G+0.045;
+// each pigeon its own bird: a size, a colour, a pace, how often it pecks, when it takes off and how high it goes
+const PIGEON_COAT = [['#8a8f9a','#6a6f7a','#5a6070','#6a8a7a'], ['#9a9aa8','#7a7a88','#686c7c','#7a7aa0'], ['#eeeef2','#d8d8e0','#e4e4ec','#c8d8d0'], ['#7c8290','#5c626e','#4c5262','#5a7a88'],
+  ['#8a8f9a','#6a6f7a','#5a6070','#8a6a8a'], ['#a8948e','#8a766e','#7a6a66','#8a8a7a'], ['#90949e','#70747e','#5e6474','#6a8a7a'], ['#868a96','#686c78','#565c6c','#7a9a8a']];
 const PIGEONS = Array.from({length:8}, (_,i)=>{
-  const g = group(scene, 0, G, 0);
-  box(g, 0.3,0.18,0.18, '#8a8f9a', 0,0.06,0, 'pigeon', {}, i); box(g, 0.14,0.06,0.2, '#6a6f7a', -0.18,0.12,0, 'pigeon', {}, i);
-  const head = group(g, 0.17,0.22,0); box(head, 0.12,0.12,0.12, '#5a6070', 0,0,0, 'pigeon', {}, i); box(head, 0.06,0.03,0.04, '#d9b07a', 0.08,0.04,0, 'pigeon', {}, i);
-  box(g, 0.1,0.06,0.16, '#6a8a7a', 0.12,0.17,0, 'pigeon', {}, i);
-  const a = i/8*Math.PI*2; return { g, head, home:new THREE.Vector3(Math.cos(a)*6.6, 0, Math.sin(a)*6.2), seed:i*1.7 };
+  const g = group(scene, 0, G, 0), C = PIGEON_COAT[i];
+  box(g, 0.3,0.18,0.18, C[0], 0,0.06,0, 'pigeon', {}, i); box(g, 0.14,0.06,0.2, C[1], -0.18,0.12,0, 'pigeon', {}, i);
+  const head = group(g, 0.17,0.22,0); box(head, 0.12,0.12,0.12, C[2], 0,0,0, 'pigeon', {}, i); box(head, 0.06,0.03,0.04, '#d9b07a', 0.08,0.04,0, 'pigeon', {}, i);
+  box(g, 0.1,0.06,0.16, C[3], 0.12,0.17,0, 'pigeon', {}, i);
+  if (i) g.scale.setScalar(0.88 + ((i*37) % 10)/36);
+  const a = i/8*Math.PI*2;
+  return { g, head, home:new THREE.Vector3(Math.cos(a)*6.6, 0, Math.sin(a)*6.2), seed:i*1.7,
+    P:{ sp:0.6 + ((i*53) % 10)/12, peck:2.5 + ((i*29) % 10)/2.5, delay:((i*41) % 10)/12, h:((i*17) % 10)/10, turns:1.8 + ((i*23) % 10)/8 } };
 });
 let flock = { t:-1, next:20 };
 // cups: a mug on a saucer, coffee inside, a little steam; you can lift it to drink
@@ -2168,6 +2175,7 @@ const LANES = [
 ];
 const BUS_LANE = 5, BUS_STOP_S = 0.5;
 const LOOP_C = [[15.25,-15.25],[-15.25,-15.25],[-15.25,15.25],[15.25,15.25]], LOOP_SEG = 30.5;
+const RING_XINGS = [[0,-15.25],[0,15.25],[-15.25,0],[15.25,0]];
 function loopAt(s2){ s2 = ((s2 % (LOOP_SEG*4)) + LOOP_SEG*4) % (LOOP_SEG*4); const k = Math.floor(s2/LOOP_SEG), u = (s2 - k*LOOP_SEG)/LOOP_SEG, A2 = LOOP_C[k], B2 = LOOP_C[(k+1)%4];
   return { x:lerp(A2[0],B2[0],u), z:lerp(A2[1],B2[1],u), dx:(B2[0]-A2[0])/LOOP_SEG, dz:(B2[1]-A2[1])/LOOP_SEG }; }
 const laneYaw = (L) => L.ax === 'x' ? (L.d > 0 ? 0 : Math.PI) : (L.d > 0 ? -Math.PI/2 : Math.PI/2);
@@ -2261,9 +2269,31 @@ if (window.__early) setTimeout(()=>$('#intro').click(), 0);   // someone clicked
 // picking
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const activeCam = () => VIEWS[view].cctv ? ccCam : fpCam;
+// where the click lands in the scene: the picture on screen is bent by some lenses (the cameras, the birds, the cat), so bend the click the same way
+function clickNdc(e){ const r = canvas.getBoundingClientRect(); let x = (e.clientX-r.left)/r.width, y = 1 - (e.clientY-r.top)/r.height;
+  const m = Math.round(post.uniforms.uMode.value), k = m === 14 ? post.uniforms.uBarrel.value : m === 1 ? 0.08 : m === 11 ? 0.1 : 0;
+  if (k){ const cx = x - 0.5, cy = y - 0.5, f = 1 - k*(cx*cx + cy*cy); x = 0.5 + cx*f; y = 0.5 + cy*f; }
+  ndc.set(x*2 - 1, y*2 - 1); return r; }
+const PICK_BODY = new Set(['human','passer','barista','sitter','launderer','clerk','stranger','npc']);
+const pickTo = new THREE.Vector3(), pickFrom = new THREE.Vector3(), pickDir = new THREE.Vector3();
+// nothing else solid between the eye and this point
+function seenFrom(cam, pt, key){ cam.getWorldPosition(pickFrom); const dist = pickDir.subVectors(pt, pickFrom).length(); ray.set(pickFrom, pickDir.normalize()); ray.far = dist - 0.3;
+  for (const h of ray.intersectObjects(scene.children, true)){ const role = h.object.userData.role;
+    if (!role || role === 'glass' || role === key || !shown(h.object) || h.object === skyDome || h.object === rain) continue; ray.far = Infinity; return false; }
+  ray.far = Infinity; return true; }
 function pick(e){
-  const r = canvas.getBoundingClientRect();
-  ndc.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+  const r = clickNdc(e), first = pickRay(r);
+  if (first && first.role !== 'ground') return first;
+  // a near miss: whoever is closest to the pointer on screen, if they are in plain view
+  const cam = activeCam(); cam.updateMatrixWorld(); const q = new THREE.Vector3(); let best = null, bd = VIEWS[view].cctv ? 34 : 28;
+  for (const c of candidates()){ if (c.key === cur && (!INDEXED.has(c.key) || sel[c.key] === c.idx)) continue;
+    pickTo.copy(c.pos); if (PICK_BODY.has(c.key)) pickTo.y += 0.85; q.copy(pickTo).project(cam); if (q.z > 1 || q.z < -1) continue;
+    const d = Math.hypot((q.x - ndc.x)*r.width/2, (q.y - ndc.y)*r.height/2); if (d >= bd) continue;
+    if (!seenFrom(cam, pickTo, c.key)){ if (!PICK_BODY.has(c.key)) continue; pickTo.y += 0.6; if (!seenFrom(cam, pickTo, c.key)) continue; }
+    best = c; bd = d; }
+  return best ? { role:best.key, idx:best.idx, obj:null } : first;
+}
+function pickRay(r){
   ray.setFromCamera(ndc, activeCam());
   for (const h of ray.intersectObjects(scene.children, true)){
     if (!shown(h.object) || h.object === skyDome || h.object === rain) continue;
@@ -2289,7 +2319,7 @@ let down = null;
 canvas.addEventListener('pointerdown', e=>{ down = { x:e.clientX, y:e.clientY, lx:e.clientX, ly:e.clientY, b:e.button }; });
 addEventListener('pointerup', e=>{
   if (!down) return; const moved = Math.hypot(e.clientX-down.x, e.clientY-down.y), b = down.b; down = null;
-  if (moved > 5 || e.target !== canvas || !started) return;
+  if (moved > 9 || e.target !== canvas || !started) return;
   if (b === 2){ if (phoneCam.up > 0 && view === 'human'){ phoneCam.up = 0; return; } stepBack(); return; }
   if (b !== 0) return;
   const hit = pick(e);
@@ -2458,7 +2488,7 @@ function animate(){
   const stepKind = (p) => roomOf(p) ? 'wood' : wet > 0.4 ? 'wet' : '';
 
   // ---- the passerby
-  const pp = evalRoutes(R_PASSER, h);
+  const pp = evalRoutes(R_PASSER, h - (PM.hold || 0));
   PM.g.visible = !!pp;
   if (pp && walkTo(PM, pp.x, pp.z, pp.moving ? Math.atan2(-pp.dz, pp.dx) : pp.tag === 'buy' ? Math.PI/2 : pp.tag === 'bus' ? Math.PI : PM.g.rotation.y, pp.moving, wsec, dt, groundY(pp.x, pp.z))) A.step(PM.g.position, 0.6, stepKind(PM.g.position));
   if (crossed(prevHour, h, BUY_AT) && ITEMS[2].taken !== Math.floor(TOTAL/24)) A.clink(MACHINE_POS);
@@ -2466,7 +2496,7 @@ function animate(){
   if (pp && pp.moving) walkers.push(PM.g.position);
 
   // ---- the one on the bench
-  const hp = evalRoutes(R_HUMAN, h);
+  const hp = evalRoutes(R_HUMAN, h - (HW.hold || 0));
   const sitting = !!hp && hp.tag === 'sit';
   H.g.visible = sitting; HW.g.visible = !!hp && !sitting;
   if (HW.g.visible && walkTo(HW, hp.x, hp.z, Math.atan2(-hp.dz, hp.dx), hp.moving, wsec, dt, groundY(hp.x, hp.z))) A.step(HW.g.position, 0.5, stepKind(HW.g.position));
@@ -2476,13 +2506,21 @@ function animate(){
 
   // ---- strangers and neighbours
   STR.forEach((s,i)=>{
-    const sp = evalRoutes(s.R, h); s.p.g.visible = !!sp; s.sp = sp; if (!sp) return;
+    const sp = evalRoutes(s.R, h - (s.p.hold || 0)); s.p.g.visible = !!sp; s.sp = sp; if (!sp) return;
     const t2 = wsec + i*3;
     s.riding = s.bike && sp.mode === 'ride';
     if (s.bike){ s.bikeG.visible = s.riding; PARKED_BIKE.visible = !s.riding; if (!s.riding) s.p.up.rotation.z *= 0.8; }
     if (s.riding){
       const yaw = sp.moving ? Math.atan2(-sp.dz, sp.dx) : s.p.g.rotation.y;
-      s.p.g.position.set(sp.x, groundY(sp.x, sp.z) + 0.25, sp.z); s.p.g.rotation.y += wrapA(yaw - s.p.g.rotation.y)*(1 - Math.exp(-dt*5));
+      // on the ring road a bike keeps to the left edge, out of the cars' way
+      const onRing = (Math.abs(Math.abs(sp.x) - 15.25) < 0.8 && Math.abs(sp.z) < 16) || (Math.abs(Math.abs(sp.z) - 15.25) < 0.8 && Math.abs(sp.x) < 16), dl = Math.hypot(sp.dx, sp.dz) || 1;
+      s.edge = (s.edge || 0) + ((onRing && sp.moving ? 1.65 : 0) - (s.edge || 0))*(1 - Math.exp(-dt*3));
+      if (sp.moving){ s.ex = sp.dz/dl; s.ez = -sp.dx/dl; }
+      const bx2 = sp.x + (s.ex || 0)*s.edge, bz2 = sp.z + (s.ez || 0)*s.edge;
+      { let blk = false; for (const c of CARS){ if (!c.g.visible) continue; const g = c.g, cy = Math.cos(g.rotation.y), sy = Math.sin(g.rotation.y), px = bx2 - g.position.x, pz = bz2 - g.position.z;
+          if (Math.abs(px*cy - pz*sy) < 3.0 && Math.abs(px*sy + pz*cy) < 1.45 && sp.dx*(g.position.x - bx2) + sp.dz*(g.position.z - bz2) > 0) blk = true; }
+        s.p.hold = clamp((s.p.hold || 0) + (blk ? 1 : -0.3)*((HOUR - prevHour + 24) % 24), 0, 0.3); }
+      s.p.g.position.set(bx2, groundY(bx2, bz2) + 0.25, bz2); s.p.g.rotation.y += wrapA(yaw - s.p.g.rotation.y)*(1 - Math.exp(-dt*5));
       s.p.legs[0].rotation.z = 1.2 + Math.sin(t2*8)*0.5; s.p.legs[1].rotation.z = 1.2 - Math.sin(t2*8)*0.5; s.p.shins.forEach((sh,j)=>sh.rotation.z = -1.3 + (j?-1:1)*Math.sin(t2*8)*0.4); s.p.fores.forEach(f=>f.rotation.z = 0.4);
       s.p.arms.forEach(a=>a.rotation.z = 1.0); s.p.up.rotation.z = -0.35; s.bikeG.position.set(0, -0.25, 0);
     } else if (sp.tag === 'fish'){
@@ -2527,7 +2565,7 @@ function animate(){
 
   // ---- cars: keep to the lane, stop at red lights, at lowered barriers, behind each other and for anyone on the road
   const crowdPos = [];
-  [PM, HW, BA, LW, SIW, ...NPC.map(n=>n.p), ...STR.map(s=>s.p)].forEach(q=>{ if (q.g.visible) crowdPos.push(q.g.position); });
+  [PM, HW, H, BA, LW, SIW, ...NPC.map(n=>n.p), ...STR.map(s=>s.p)].forEach(q=>{ if (q.g.visible) crowdPos.push({ x:q.g.position.x, z:q.g.position.z, by:q.blocked ? q.blockBy : null }); });
   if (cat.visible) crowdPos.push(cat.position); if (dog.visible) crowdPos.push(dog.position);
   carSpawn -= dt;
   if (carSpawn < 0){ carSpawn = (nightF > 0.6 ? 9 : 3.5) + Math.random()*4;
@@ -2545,9 +2583,9 @@ function animate(){
     if (isBus && busSt.phase === 'in' && c.lane === BUS_LANE){ const dist = (c.s - BUS_STOP_S); vT = Math.min(vT, Math.max(0, dist)*0.7); }
     // whoever is in front: cars, the bus, people
     for (const o of agents){ if (o === c || o.lane !== c.lane) continue; const gap = (o.s - c.s)*d; if (gap > 0 && gap < 16) vT = Math.min(vT, Math.max(0, gap - (isBus || o === busSt ? 10 : 6.5))*1.1); }
-    for (const P of crowdPos){ const along = ((ln.ax === 'x' ? P.x : P.z) - c.s)*d, lat = Math.abs((ln.ax === 'x' ? P.z : P.x) - ln.c);
+    for (const P of crowdPos){ const along = ((ln.ax === 'x' ? P.x : P.z) - c.s)*d, lat = Math.abs((ln.ax === 'x' ? P.z : P.x) - ln.c); if (P.by && P.by === (isBus ? bus : c.g) && lat > (isBus ? 2.5 : 2.0)) continue;
       if (lat < 2.7 && along > 0 && along < 17) vT = Math.min(vT, Math.max(0, along - (isBus ? 8.5 : 5.8))*0.9); }
-    c.v += clamp(vT - c.v, -9*dt, 3*dt); c.s += c.v*d*dt;
+    c.v += clamp(vT - c.v, -(vT < 0.5 ? 16 : 9)*dt, 3*dt); c.s += c.v*d*dt;
     // turns at the coast
     if (ln.turnTo !== undefined && (c.s - ln.a1)*d >= 0){ const nl = LANES[ln.turnTo]; c.s = ln.c; c.lane = ln.turnTo; }
     else if (ln.turns) for (const tn of ln.turns){ if (!c.turned[tn.at] && (c.s - tn.at)*d >= 0){ c.turned[tn.at] = true; if ((isBus && tn.bus) || (!isBus && Math.random() < tn.p)){ c.s = ln.c; c.lane = tn.to; break; } } }
@@ -2559,9 +2597,13 @@ function animate(){
   }
   for (const c of CARS){ if (!c.loop) continue;
     const P0 = loopAt(c.ls); let vT = 4.2;
-    for (const P of crowdPos){ const rx = P.x - P0.x, rz = P.z - P0.z, along = rx*P0.dx + rz*P0.dz, lat = Math.abs(rx*P0.dz - rz*P0.dx); if (lat < 2.3 && along > 0.5 && along < 11) vT = Math.min(vT, Math.max(0, along - 4.4)*0.9); }
+    // anyone at or near a crossing ahead: stop before the stripes, never on them
+    for (const [cx2, cz2] of RING_XINGS){ const along = (cx2 - P0.x)*P0.dx + (cz2 - P0.z)*P0.dz, lat = Math.abs((cx2 - P0.x)*P0.dz - (cz2 - P0.z)*P0.dx);
+      if (lat > 1 || along < 2.6 || along > 16) continue;
+      if (crowdPos.some(P=>Math.hypot(P.x - cx2, P.z - cz2) < 6)) vT = Math.min(vT, Math.max(0, along - 4.9)*0.9); }
+    for (const P of crowdPos){ const rx = P.x - P0.x, rz = P.z - P0.z, along = rx*P0.dx + rz*P0.dz, lat = Math.abs(rx*P0.dz - rz*P0.dx); if (P.by === c.g && lat > 1.8) continue; if (lat < 2.8 && along > -1.2 && along < 11) vT = Math.min(vT, Math.max(0, along - 4.4)*0.9); }
     for (const o of CARS){ if (!o.loop || o === c) continue; let gap = o.ls - c.ls; gap = ((gap % 122) + 122) % 122; if (gap < 9) vT = Math.min(vT, Math.max(0, gap - 6)); }
-    c.v += clamp(vT - c.v, -8*dt, 2*dt); c.ls += c.v*dt;
+    c.v += clamp(vT - c.v, -(vT < 0.5 ? 14 : 8)*dt, 2*dt); c.ls += c.v*dt;
     const P1 = loopAt(c.ls); c.g.visible = true; c.g.position.set(P1.x, G+0.0, P1.z);
     c.yaw += wrapA(Math.atan2(-P1.dz, P1.dx) - c.yaw)*(1 - Math.exp(-dt*6)); c.g.rotation.y = c.yaw; }
   // the bus timetable: it leaves the coast early enough to wait at the stop, and waits until it is due to go
@@ -2581,7 +2623,7 @@ function animate(){
     if (n.follow !== undefined){
       const f = NPC[n.follow]; np = f.np ? { ...f.np } : null;
       if (np){ const ang = np.moving ? Math.atan2(-np.dz, np.dx) : f.p.g.rotation.y; np.x += Math.sin(ang)*n.side; np.z += Math.cos(ang)*n.side; }
-    } else np = evalRoutes(n.R, h);
+    } else np = evalRoutes(n.R, h - (n.p.hold || 0));
     n.np = np; n.p.g.visible = !!np; if (!np) return;
     if (np.tag === 'sit') sitAt(n.p, np.x, np.z, n.sitAng ?? 0, n.sitY, dt);
     else if (np.tag === 'argue'){
@@ -2677,11 +2719,20 @@ function animate(){
       for (const a of crowd){ if (a.fix) continue;
         for (const [g, hl, hw] of cars){ const px = a.bx + a.av.x - g.position.x, pz = a.bz + a.av.y - g.position.z, cy = Math.cos(g.rotation.y), sy = Math.sin(g.rotation.y);
           const lx = px*cy - pz*sy, lz = px*sy + pz*cy, ex = hl + 0.55 + a.rad, ez = hw + 0.55 + a.rad;
+          if (it === 0 && Math.abs(lx) < ex + 0.35 && Math.abs(lz) < ez + 0.35 && a.skipBy === g) a.nearSkip = true;
+          if (it === 0 && a.skipBy !== g && Math.abs(lx) < ex + 0.35 && Math.abs(lz) < ez + 0.35 && ((a.blocked && a.blockBy === g) || (a.pbx !== undefined && (a.bx - a.pbx)*(g.position.x - a.bx) + (a.bz - a.pbz)*(g.position.z - a.bz) > 1e-5))){ a.blockNow = true; a.blockBy = g; }
           if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) continue;
           let mx = 0, mz = 0; if (ex - Math.abs(lx) < ez - Math.abs(lz)) mx = (ex - Math.abs(lx))*Math.sign(lx || 1); else mz = (ez - Math.abs(lz))*Math.sign(lz || 1);
-          tryMove(a, mx*cy + mz*sy, -mx*sy + mz*cy); } }
+          // out of a car's way you may step onto the road for a moment; only real walls and things stop you
+          const wx = mx*cy + mz*sy, wz = -mx*sy + mz*cy;
+          if (!bodyHits(a.bx + a.av.x + wx, a.bz + a.av.y + wz)){ a.av.x += wx; a.av.y += wz; } else tryMove(a, wx, wz); } }
     }
-    for (const a of crowd){ const L = Math.hypot(a.av.x, a.av.y); if (L > 1.4){ a.av.x *= 1.4/L; a.av.y *= 1.4/L; }
+    // whoever had to stop for a car falls a little behind their day, and catches up afterwards
+    const dhr = ((HOUR - prevHour) + 24) % 24;
+    for (const a of crowd){ if (a.fix) continue; a.blocked = !!a.blockNow; a.blockNow = false;
+      if (!a.nearSkip) a.skipBy = null; a.nearSkip = false;
+      if (a.blocked){ a.blockT = (a.blockT || 0) + dt; if (a.blockT > 3){ a.skipBy = a.blockBy; a.blocked = false; a.blockT = 0; } } else a.blockT = 0;   /* a car that won't move: go round it */ a.hold = clamp((a.hold || 0) + (a.blocked ? dhr : -dhr*0.3), 0, 0.3); a.pbx = a.bx; a.pbz = a.bz; }
+    for (const a of crowd){ const L = Math.hypot(a.av.x, a.av.y); if (L > 2.2){ a.av.x *= 2.2/L; a.av.y *= 2.2/L; }
       // an old sidestep carried along a corridor must not walk the body into a shelf or a wall
       if (!bodyHits(a.bx, a.bz)) for (let k=0; k<8 && bodyHits(a.bx + a.av.x, a.bz + a.av.y); k++){ a.av.x *= 0.6; a.av.y *= 0.6; if (k === 7) a.av.set(0, 0); }
       a.g.position.x = a.bx + a.av.x; a.g.position.z = a.bz + a.av.y; } }
@@ -2773,18 +2824,38 @@ function animate(){
   if (flock.t >= 0){ flock.t += dt; if (flock.t > 9) flock.t = -1; }
   const ft = flock.t >= 0 ? flock.t/9 : 0, fly = Math.sin(Math.PI*ft);
   PIGEONS.forEach((p,i)=>{
-    if (roost){ p.g.position.set(KIOSK.x-0.9 + i*0.24, G+2.45, KIOSK.z + (i%2)*0.4); p.g.rotation.y = Math.PI/2; p.head.position.y = 0.2; return; }
+    if (roost){ p.g.position.set(KIOSK.x-0.9 + i*0.24, G+2.45, KIOSK.z + (i%2)*0.4); p.g.rotation.y = Math.PI/2; p.head.position.set(0.17, 0.2, 0); p.head.rotation.set(0, 0, 0); p.gx = undefined; return; }
+    const P = p.P, me = view === 'pigeon' && sel.pigeon === i;
     const fx0 = feed.t > 0 ? feed.pos.x - 0.6 : PBENCH.x - 1.0, fz0 = feed.t > 0 ? feed.pos.z - 0.4 : PBENCH.z - 2.6;
-    const cx = gmFeeding ? fx0 + (i%4)*0.4 : p.home.x, cz = gmFeeding ? fz0 + Math.floor(i/4)*0.45 : p.home.z;
-    const wx = cx + Math.sin(tReal*0.3 + p.seed)*(gmFeeding?0.2:0.8), wz = cz + Math.cos(tReal*0.23 + p.seed*2)*(gmFeeding?0.2:0.7);
-    const ang = ft*Math.PI*2.4 + i*0.8, R = lerp(3, 9 + i*0.4, fly);
-    const fx = lerp(wx, Math.cos(ang)*R, fly), fz = lerp(wz, Math.sin(ang)*R*0.9, fly);
+    const ax = gmFeeding ? fx0 + (i%4)*0.4 : p.home.x, az = gmFeeding ? fz0 + Math.floor(i/4)*0.45 : p.home.z;
+    // on the ground each bird does its own thing: a few steps, some pecking, a look round, a preen
+    if (p.gx === undefined){ p.gx = ax; p.gz = az; p.st = 'peck'; p.tm = Math.random()*2; p.tx = ax; p.tz = az; p.yaw = Math.random()*6.28; }
+    p.tm -= dt;
+    if (p.tm <= 0){ const r = Math.random(), far = Math.hypot(p.gx - ax, p.gz - az) > (gmFeeding ? 0.5 : 1.8);
+      if (far || r < (gmFeeding ? 0.3 : 0.4)){ p.st = 'walk'; const a2 = Math.random()*6.283, d2 = Math.random()*(gmFeeding ? 0.35 : 1.3); p.tx = ax + Math.cos(a2)*d2; p.tz = az + Math.sin(a2)*d2; p.tm = 8; }
+      else if (r < (gmFeeding ? 0.88 : 0.7)){ p.st = 'peck'; p.tm = 0.6 + Math.random()*P.peck*0.5; }
+      else if (r < 0.9 || me){ p.st = 'look'; p.tm = 0.8 + Math.random()*2; p.look = (Math.random() - 0.5)*(me ? 0.8 : 2.4); }
+      else { p.st = 'preen'; p.tm = 1 + Math.random()*1.5; } }
+    let moving = false;
+    if (p.st === 'walk'){ const dx = p.tx - p.gx, dz = p.tz - p.gz, d = Math.hypot(dx, dz);
+      if (d < 0.04) p.tm = 0; else { const v = Math.min(d, P.sp*0.42*dt*(gmFeeding ? 1.5 : 1)); p.gx += dx/d*v; p.gz += dz/d*v; moving = true; p.yaw = Math.atan2(-dz, dx); } }
+    // in the air: each one goes up a moment apart, circles at its own height and comes down in its own time
+    const ft2 = flock.t >= 0 ? clamp((flock.t - P.delay)/(9 - 1.2), 0, 1) : 0, fly2 = Math.sin(Math.PI*ft2);
+    const ang = ft2*Math.PI*P.turns + i*0.8, R = lerp(3, 8 + i*0.5, fly2);
     const prev = tmpW.copy(p.g.position);
-    p.g.position.x += (fx - p.g.position.x)*(fly > 0.02 ? 1 : 1 - Math.exp(-dt*1.2)); p.g.position.z += (fz - p.g.position.z)*(fly > 0.02 ? 1 : 1 - Math.exp(-dt*1.2));
-    p.g.position.y = G + fly*(5 + i*0.3);
+    p.g.position.set(lerp(p.gx, Math.cos(ang)*R, fly2), G + fly2*(3.8 + P.h*2.8), lerp(p.gz, Math.sin(ang)*R*0.9, fly2));
     const ddx = p.g.position.x - prev.x, ddz = p.g.position.z - prev.z;
-    if (Math.abs(ddx)+Math.abs(ddz) > 1e-4) p.g.rotation.y = Math.atan2(-ddz, ddx);
-    p.head.position.y = 0.22 + (fly < 0.05 ? Math.max(0, Math.sin(tReal*(gmFeeding?9:5) + p.seed))*-0.1 : 0);
+    if (fly2 > 0.02 && Math.abs(ddx) + Math.abs(ddz) > 1e-4) p.yaw = Math.atan2(-ddz, ddx);
+    p.g.rotation.y += wrapA(p.yaw - p.g.rotation.y)*(1 - Math.exp(-dt*(fly2 > 0.02 ? 10 : 7)));
+    // the head bobs with each step, dips to peck, turns to look, tucks back to preen
+    let hx = 0.17, hy = 0.22, hry = 0, hrz = 0;
+    if (fly2 < 0.05){
+      if (moving) hx = 0.17 + Math.sin(tReal*P.sp*15 + p.seed)*0.045;
+      else if (p.st === 'peck'){ const k = Math.max(0, Math.sin(tReal*P.peck*1.7 + p.seed)); hy = 0.22 - k*0.12; hrz = -k*0.5; }
+      else if (p.st === 'look') hry = p.look;
+      else if (p.st === 'preen'){ hx = 0.07; hy = 0.19; hry = 2.3; hrz = 0.25 + Math.sin(tReal*8 + p.seed)*0.15; } }
+    const kh = 1 - Math.exp(-dt*14); p.head.position.x += (hx - p.head.position.x)*kh; p.head.position.y += (hy - p.head.position.y)*kh;
+    p.head.rotation.y += (hry - p.head.rotation.y)*(1 - Math.exp(-dt*6)); p.head.rotation.z += (hrz - p.head.rotation.z)*kh;
   });
   if (!roost && Math.random() < dt*0.25) A.coo(FOUNTAIN);
 
@@ -2814,9 +2885,13 @@ function animate(){
   DUCKS.forEach((d,i)=>{ d.head.rotation.z = Math.sin(tReal*1.3 + i)*0.15; d.a += dt*d.sp; const x = PARK.cx + Math.cos(d.a)*(3.4 - i*0.7), z = PARK.cz + Math.sin(d.a)*(2.1 - i*0.4);
     d.g.position.set(x, G+0.2 + Math.sin(tReal*2 + i)*0.01, z); d.g.rotation.y = -d.a - Math.PI/2; });
   if (Math.random() < dt*0.08) A.quack(DUCK_POS);
-  spray.forEach((m,i)=>{ const q = ((tReal*0.9 + i/16) % 1); const a = i/16*Math.PI*2, top = i%2 === 0;
-    if (top) m.position.set(Math.cos(a)*q*1.4, G+3.4 + q*0.5 - q*q*1.0, Math.sin(a)*q*1.4);
-    else m.position.set(Math.cos(a)*(1.6 + q*2.6), G+2.6 + q*0.4 - q*q*2.2, Math.sin(a)*(1.6 + q*2.6)); });
+  // the fountain: a jet that falls back into the top bowl, a curtain spilling over its rim, thin arcs out into the pool; every drop lands in the water
+  spray.forEach((m,i)=>{ const k = i % 3, j = Math.floor(i/3), a = j/12*Math.PI*2 + k*0.26, q = (tReal*(k === 0 ? 0.8 : k === 1 ? 1.1 : 0.7) + j*0.083 + k*0.31) % 1;
+    let r, y;
+    if (k === 0){ r = q*0.5; y = G + 2.0 + 4*q*(1 - q)*1.05; }
+    else if (k === 1){ r = 0.9 + q*0.32; y = G + 1.95 - q*q*1.5; }
+    else { r = 0.95 + q*1.3; y = G + 2.0 + 0.5*q - 2.05*q*q; }
+    m.position.set(Math.cos(a)*r, y, Math.sin(a)*r); });
   paws.forEach((d,i)=>d.material.opacity = ov.cat * (0.45 + 0.4*Math.max(0, Math.sin(tReal*2 - i*0.7))));
   screenMat.color.setRGB(0.55+0.1*Math.sin(tReal*0.7), 0.8, 1);
   MUGS.forEach((m,i)=>m.steam.forEach((st,j)=>{ const q = (tReal*0.4 + j/3 + i*0.17) % 1; st.position.y = 0.13 + q*0.18; st.material.opacity = 0.35*(1-q)*m.level; st.lookAt(LIS.pos); }));
