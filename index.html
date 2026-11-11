@@ -960,18 +960,18 @@ jhouse({ name:'la-up', x0:19, x1:28.5, z0:-10.5, z1:-2.5, floors:2, front:'w', r
 // the outside stair up to the flats
 { for (let i=0;i<10;i++) box(scene, 1.0, 0.08, 0.28, '#c8ccd8', 21+i*0.32*0+0.5, G+0.3+i*0.31, -2.0 + 0, 'world').position.set(27.6 - i*0.32, G+0.3+i*0.31+0.04, -1.9);
   box(scene, 0.05, 3.4, 0.05, '#c8ccd8', 27.8, G, -1.4); box(scene, 3.4, 0.05, 0.05, '#c8ccd8', 26.2, G+3.6, -1.4); block(24.2, 28.2, -2.4, -1.3); }
-const WASH_Z = [-9.6,-8.4,-7.2,-6.0,-4.8,-3.6];
+const WASH_Z = [-9.6,-8.4,-7.2,-6.0,-4.8,-3.6]; let WASH_PORT = null;
 const drums = WASH_Z.map((z,i)=>{
   const role = i===3 ? 'washer' : 'world';
   box(scene, 0.7,0.85,0.7, '#f2f2f6', 24.5,G+0.2,z, role, { round:0.05 }); box(scene, 0.7,0.2,0.7, '#c8c4d0', 24.5,G,z);
   box(scene, 0.7,0.8,0.7, '#f2f2f6', 24.5,G+1.07,z, 'world', { round:0.05 });
-  const port = new THREE.Mesh(new THREE.CylinderGeometry(0.23,0.23,0.05,16), new THREE.MeshLambertMaterial({ color:dreamC('#7a8aa8', role) })); port.rotation.z = Math.PI/2; port.position.set(24.13, G+0.6, z); port.userData.role = role; scene.add(port);
+  const port = new THREE.Mesh(new THREE.CylinderGeometry(0.23,0.23,0.05,16), new THREE.MeshLambertMaterial({ color:dreamC('#7a8aa8', role) })); port.rotation.z = Math.PI/2; port.position.set(24.13, G+0.6, z); port.userData.role = role; scene.add(port); if (i === 3) WASH_PORT = port;
   const port2 = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,0.05,14), new THREE.MeshLambertMaterial({ color:dreamC('#8a9ab8') })); port2.rotation.z = Math.PI/2; port2.position.set(24.13, G+1.48, z); scene.add(port2);
   const d = group(scene, 24.11, G+0.6, z); d.rotation.y = -Math.PI/2; box(d, 0.32,0.05,0.02, '#d8eef4', 0,-0.03,0, role); return d;
 });
 block(24.1, 24.9, -10.0, -3.2);
 const WASHER_POS = new THREE.Vector3(24.13, G+0.6, WASH_Z[3]);
-[['#f4a8c8',0.08,0.04],['#a8c8f4',-0.07,-0.05],['#ffffff',0.02,0.09]].forEach(([c,x,y])=>box(drums[3], 0.11,0.08,0.03, c, x,y,0.05, 'washer', { round:0.02 }));
+[['#f4a8c8',0.17,0.03],['#a8c8f4',-0.15,-0.09],['#ffffff',0.02,0.18]].forEach(([c,x,y])=>box(drums[3], 0.08,0.06,0.03, c, x,y,0.05, 'washer', { round:0.02 }));   // clothes tumbling round the rim
 const LBENCH = new THREE.Vector3(21.8, G, -6.4); bench(LBENCH.x, LBENCH.z, Math.PI/2, '#a8d8d0');
 box(scene, 2.4,0.85,0.6, '#e8e4ec', 21.2,G,-10.0, 'world', { round:0.03 }); block(20, 22.4, -10.3, -9.7);
 [[20.5,'#ffffff'],[21.2,'#f4c8d8'],[21.8,'#c8d8f4']].forEach(([x,c])=>box(scene, 0.4,0.12,0.3, c, x,G+0.85,-10.0, 'world', { round:0.03 }));
@@ -2893,7 +2893,9 @@ function animate(){
   PM.head.visible = view !== 'passer'; BA.head.visible = view !== 'barista'; SI.head.visible = view !== 'sitter'; SIW.head.visible = view !== 'sitter'; LW.head.visible = view !== 'launderer'; CL.head.visible = view !== 'clerk';
   STR.forEach((st,i)=>st.p.head.visible = !(view==='stranger' && sel.stranger===i));
   NPC.forEach((n,i)=>n.p.head.visible = !(view==='npc' && sel.npc===i));
-  CROWS.forEach((c,i)=>c.head.visible = !(view==='crow' && sel.crow===i)); DUCKS.forEach((d,i)=>d.head.visible = !(view==='duck' && sel.duck===i));
+  CROWS.forEach((c,i)=>c.head.visible = !(view==='crow' && sel.crow===i));
+  if (WASH_PORT) WASH_PORT.visible = view !== 'washer';   // from inside the drum, its own glass would fill the whole view
+  DUCKS.forEach((d,i)=>d.head.visible = !(view==='duck' && sel.duck===i));
   mainLamp.cone.visible = view !== 'lamp';
   CARS.forEach((c,i)=>c.driver.head.visible = !(view==='car' && sel.car===i)); BUS_ME.head.visible = view !== 'bus';
   EXCLUSIVE.forEach(x=>x.obj.visible = x.found || view === x.view);
@@ -3044,7 +3046,7 @@ const DYN_ROLES = new Set(['human','sitter','passer','barista','launderer','cler
 const VC_MATS = [];
 function batchStatic(){
   const dyn = new Set([fpCam, canopy, bus, beam, loafG, dog, cat, ...DOORS.map(d=>d.p), ...drums, ...CARS.map(c=>c.g), ...TRAMS, ...BOATS, ...GULLS.map(q=>q.g), ...DUCKS.map(d=>d.g),
-    ...MUGS.map(m=>m.g), ...EXCLUSIVE.map(e=>e.obj), ...SHUTTERS.map(q=>q.m), PARKED_BIKE, ...PIGEONS.map(p=>p.g), ...XINGS.flatMap(X=>X.arms), ...leaves.map(l=>l.m), ...streaks, ...MOTHS.map(o=>o.m), ...spray]);
+    ...MUGS.map(m=>m.g), ...EXCLUSIVE.map(e=>e.obj), ...SHUTTERS.map(q=>q.m), PARKED_BIKE, WASH_PORT, ...PIGEONS.map(p=>p.g), ...XINGS.flatMap(X=>X.arms), ...leaves.map(l=>l.m), ...streaks, ...MOTHS.map(o=>o.m), ...spray]);
   scene.traverse(o=>{ if (o.isGroup && (o.userData.person)) dyn.add(o); });
   scene.updateMatrixWorld(true);
   const groups = new Map(), victims = [];
